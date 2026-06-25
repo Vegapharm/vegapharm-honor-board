@@ -688,13 +688,16 @@
     </main>
 
     <footer>
-      <span>Демо-презентация для онлайн-экрана, холла или школьного сайта</span>
+      <span>VEGAPHARM · Доска почета</span>
       <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
     </footer>
   </div>
 
   <script>
-    const heroes = [
+    const SUPABASE_URL = "https://vcmvlnjnjfcwilueapvx.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_WGTC4A-Gj1zLGorG1eIRXQ_ziz34j9a";
+
+    let heroes = [
       {
         name: "Алина Рахимова",
         role: "Лидер учебных проектов",
@@ -784,6 +787,47 @@
       bar.style.animation = "";
       clearInterval(timer);
       timer = setInterval(() => setHero(current + 1, true), 6000);
+    }
+
+    async function loadHeroes() {
+      try {
+        const endpoint = `${SUPABASE_URL}/rest/v1/honorees?select=*&is_active=eq.true&order=sort_order.asc,id.asc`;
+        const response = await fetch(endpoint, {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`
+          }
+        });
+
+        if (!response.ok) throw new Error(`Supabase: ${response.status}`);
+
+        const rows = await response.json();
+        if (rows.length) {
+          const medals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+          const palettes = [
+            ["#f4c96b", "#4fb28f"],
+            ["#73a7ff", "#f4c96b"],
+            ["#ef6f65", "#4fb28f"],
+            ["#f4c96b", "#73a7ff"]
+          ];
+
+          heroes = rows.map((row, index) => ({
+            name: row.full_name,
+            role: row.position,
+            medal: medals[index] || String(index + 1),
+            tag: row.category || "Сотрудник месяца",
+            story: row.achievement,
+            colors: palettes[index % palettes.length],
+            portrait: row.photo_url
+              ? `linear-gradient(135deg, rgba(244,201,107,.18), rgba(79,178,143,.12)), url("${row.photo_url}") center/cover`
+              : "linear-gradient(135deg, rgba(244,201,107,.86), rgba(79,178,143,.82)), radial-gradient(circle at 68% 30%, #fff2b8 0 9%, transparent 10%), linear-gradient(90deg, #14342b, #251c12)"
+          }));
+        }
+      } catch (error) {
+        console.warn("Не удалось загрузить данные Supabase:", error);
+      }
+
+      setHero(0, false);
     }
 
     document.getElementById("prev").addEventListener("click", () => setHero(current - 1, true));
@@ -893,7 +937,7 @@
     addEventListener("resize", sizeCanvas);
     sizeCanvas();
     animate();
-    setHero(0, false);
+    loadHeroes();
     setTimeout(() => firework(innerWidth * 0.5, innerHeight * 0.38, ["#f4c96b", "#ffffff", "#4fb28f"]), 900);
     setTimeout(launchShow, 3300);
     setInterval(celebrationLoop, 2400);
